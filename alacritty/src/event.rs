@@ -50,7 +50,7 @@ use crate::display::window::Window;
 use crate::display::{Display, Preedit, SizeInfo};
 use crate::input::{self, ActionContext as _, FONT_SIZE_STEP};
 use crate::logging::LOG_TARGET_CONFIG;
-use crate::message_bar::{Message, MessageBuffer};
+use crate::message_bar::{Message, MessageBuffer, MessageType};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::window_context::WindowContext;
 
@@ -102,6 +102,7 @@ pub enum EventType {
     BlinkCursorTimeout,
     SearchNext,
     Frame,
+    TmuxMessage(Message),
 }
 
 impl From<TerminalEvent> for EventType {
@@ -1305,6 +1306,11 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                     self.ctx.message_buffer.push(message);
                     self.ctx.display.pending_update.dirty = true;
                 },
+                EventType::TmuxMessage(message) => {
+                    println!("tmux");
+                    // self.ctx.message_buffer.push(message);
+                    // self.ctx.display.pending_update.dirty = true;
+                },
                 EventType::Terminal(event) => match event {
                     TerminalEvent::Title(title) => {
                         if !self.ctx.preserve_title && self.ctx.config.window.dynamic_title {
@@ -1580,6 +1586,10 @@ impl Processor {
         let proxy = event_loop.create_proxy();
         let mut scheduler = Scheduler::new(proxy.clone());
         let mut initial_window_options = Some(initial_window_options);
+
+        // let mut message = Message::new("ezaeazeza".to_string(), MessageType::Error);
+
+        // let _ = proxy.send_event(Event::new(EventType::Message(message), None));
 
         // Disable all device events, since we don't care about them.
         event_loop.listen_device_events(DeviceEvents::Never);

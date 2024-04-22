@@ -48,11 +48,13 @@ use crate::display::hint::{HintMatch, HintState};
 use crate::display::meter::Meter;
 use crate::display::window::Window;
 use crate::event::{Event, EventType, Mouse, SearchState};
-use crate::message_bar::{MessageBuffer, MessageType};
+use crate::message_bar::{Message, MessageBuffer, MessageType};
 use crate::renderer::rects::{RenderLine, RenderLines, RenderRect};
 use crate::renderer::{self, GlyphCache, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::string::{ShortenDirection, StrShortener};
+
+use self::content::RenderableCell;
 
 pub mod color;
 pub mod content;
@@ -252,7 +254,7 @@ impl SizeInfo<f32> {
             cell_height,
             padding_x: padding_x.floor(),
             padding_y: padding_y.floor(),
-            screen_lines,
+            screen_lines: screen_lines - 1,
             columns,
         }
     }
@@ -389,6 +391,7 @@ pub struct Display {
 
     glyph_cache: GlyphCache,
     meter: Meter,
+    i: bool,
 }
 
 impl Display {
@@ -440,6 +443,7 @@ impl Display {
         let viewport_size = window.inner_size();
 
         // Create new size with at least one column and row.
+        info!("{}", cell_height);
         let size_info = SizeInfo::new(
             viewport_size.width as f32,
             viewport_size.height as f32,
@@ -503,6 +507,7 @@ impl Display {
         }
 
         Ok(Self {
+            i: true,
             context: ManuallyDrop::new(Replaceable::new(context)),
             visual_bell: VisualBell::from(&config.bell),
             renderer: ManuallyDrop::new(renderer),
@@ -728,9 +733,22 @@ impl Display {
         // Collect renderable content before the terminal is dropped.
         let mut content = RenderableContent::new(config, self, &terminal, search_state);
         let mut grid_cells = Vec::new();
+
         for cell in &mut content {
             grid_cells.push(cell);
         }
+        let cell = RenderableCell {
+            character: 'e',
+            bg: config.colors.normal.green,
+            bg_alpha: 1.,
+            fg: config.colors.normal.black,
+            point: Point::new(content.size.screen_lines(), Column(0)),
+            underline: Rgb::new(0, 0, 0),
+            extra: None,
+            flags: Flags::DIM,
+        };
+        grid_cells.push(cell);
+
         let selection_range = content.selection_range();
         let foreground_color = content.color(NamedColor::Foreground as usize);
         let background_color = content.color(NamedColor::Background as usize);

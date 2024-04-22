@@ -33,7 +33,7 @@ pub struct RenderableContent<'a> {
     config: &'a UiConfig,
     colors: &'a List,
     focused_match: Option<&'a Match>,
-    size: &'a SizeInfo,
+    pub size: &'a SizeInfo,
 }
 
 impl<'a> RenderableContent<'a> {

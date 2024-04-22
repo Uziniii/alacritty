@@ -30,6 +30,7 @@ use crate::config::mouse::{Mouse, MouseBindings};
 use crate::config::scrolling::Scrolling;
 use crate::config::selection::Selection;
 use crate::config::terminal::Terminal;
+use crate::config::tmux::Tmux;
 use crate::config::window::WindowConfig;
 use crate::config::LOG_TARGET_CONFIG;
 
@@ -98,6 +99,9 @@ pub struct UiConfig {
     /// Shell startup directory.
     pub working_directory: Option<PathBuf>,
 
+    /// Tmux like mode.
+    pub tmux: Tmux,
+
     /// Keyboard configuration.
     keyboard: Keyboard,
 
@@ -123,6 +127,7 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
+            tmux: Default::default(),
             live_config_reload: true,
             #[cfg(unix)]
             ipc_socket: true,
