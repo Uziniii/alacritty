@@ -31,17 +31,16 @@ use alacritty_terminal::tty;
 
 use crate::cli::{ParsedOptions, WindowOptions};
 use crate::clipboard::Clipboard;
-#[cfg(target_os = "macos")]
-use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
 use crate::event::{
-    ActionContext, Event, EventProxy, InlineSearchState, Mouse, SearchState, TouchPurpose,
+    ActionContext, Event, EventProxy, EventType, InlineSearchState, Mouse, SearchState,
+    TouchPurpose,
 };
 #[cfg(unix)]
 use crate::logging::LOG_TARGET_IPC_CONFIG;
-use crate::message_bar::MessageBuffer;
+use crate::message_bar::{Message, MessageBuffer, MessageType};
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
 
@@ -137,21 +136,6 @@ impl WindowContext {
         let mut identity = config.window.identity.clone();
         options.window_identity.override_identity_config(&mut identity);
 
-        // Check if new window will be opened as a tab.
-        #[cfg(target_os = "macos")]
-        let tabbed = options.window_tabbing_id.is_some();
-        #[cfg(not(target_os = "macos"))]
-        let tabbed = false;
-
-        #[cfg(target_os = "macos")]
-        let config = if tabbed && config.window.startup_mode == StartupMode::Fullscreen {
-            let mut config = config.as_ref().clone();
-            config.window.startup_mode = StartupMode::Windowed;
-            Rc::new(config)
-        } else {
-            config
-        };
-
         let window = Window::new(
             event_loop,
             &config,
@@ -169,6 +153,12 @@ impl WindowContext {
             &gl_config,
             Some(raw_window_handle),
         )?;
+
+        // Check if new window will be opened as a tab.
+        #[cfg(target_os = "macos")]
+        let tabbed = options.window_tabbing_id.is_some();
+        #[cfg(not(target_os = "macos"))]
+        let tabbed = false;
 
         let display = Display::new(window, gl_context, &config, tabbed)?;
 
@@ -240,6 +230,11 @@ impl WindowContext {
         // to be sent to the pty loop and ultimately written to the pty.
         let loop_tx = event_loop.channel();
 
+        let message =
+            Message::new(format!("{:?}", options.window_tabbing_id), MessageType::Warning);
+        // message.set_target(record.target().to_owned());
+
+        let _ = event_proxy.send_event(EventType::Message(message));
         // Kick off the I/O thread.
         let _io_thread = event_loop.spawn();
 
